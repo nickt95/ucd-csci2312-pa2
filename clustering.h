@@ -24,12 +24,10 @@ namespace clustering {
         point(const point&);
         ~point();
 
-        double distanceTo(const point, const point);
-
-        int getDim(){
+        int getDim() const{
             return dim;
         }
-        double* getPointDim(){
+        double* getPointDim() const{
             return pointDim;
         }
 
@@ -76,13 +74,13 @@ namespace clustering {
         cluster(const cluster&);
         ~cluster();
 
-        int getSize(){
+        int getSize() const{
             return size;
         }
-        node* getPointList(){
+        node* getPointList() const{
             return pointList;
         }
-        unsigned int getId(){
+        unsigned int getId() const{
             return id;
         }
         void setId(){
@@ -134,6 +132,7 @@ namespace clustering {
             point p = curr->payload;
             curr = curr->next;
 
+            //sum of points
             while(curr != nullptr){
                 p += curr->payload;
                 curr = curr->next;
@@ -164,11 +163,18 @@ namespace clustering {
         void pickPoints(int, pointPtr*);
 
         double intraClusterDistance();
-        double interClusterDistance(const cluster&, const cluster&);
         int intraClusterEdges();
-        int interClusterEdges(const cluster&, const cluster&);
     };
 
+    class kMeans{
+    private:
+        string in;
+        string out;
+    public:
+        kMeans(string, string);
+
+        void run(int);
+    };
 }
 
 #endif //PA2_CLUSTERING_H

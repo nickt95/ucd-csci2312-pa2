@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <sstream>
+#include <fstream>
 
 using namespace clustering;
 
@@ -33,12 +34,14 @@ point::~point() {
     delete [] pointDim;
 }
 
-double point::distanceTo(const point point1, const point point2) {
-    assert(point1.dim == point2.dim);
+double distanceTo(const point point1, const point point2);
+
+double distanceTo(const point point1, const point point2) {
+    assert(point1.getDim() == point2.getDim());
 
     double sum = 0;
-    for(int i = 0; i < point1.dim; i++){
-        sum += pow(point1.pointDim[i]+point2.pointDim[i],2);
+    for(int i = 0; i < point1.getDim(); i++){
+        sum += pow(point1.getPointDim()[i]+point2.getPointDim()[i],2);
     }
 
     return sqrt(sum);
@@ -535,11 +538,129 @@ ostream &operator<<(ostream &lhs, cluster &rhs) {
 }
 
 void cluster::pickPoints(int k, pointPtr *pointArray) {
-    //get size of steps to take
-    int stepSize = getSize()/k;
-
-    //point to start
     node* curr = getPointList();
 
-    //get points
+    assert(curr != nullptr);
+
+    if(k > getSize()){
+        for(int i = 0; i <= k-1; i++){
+            pointArray[i] = &(curr->payload);
+        }
+    }
+    else{
+        for(int i = 0; i <= k-1; i++){
+            pointArray[i] = &(curr->payload);
+        }
+        curr = curr->next;
+    }
+
+}
+
+double cluster::intraClusterDistance() {
+    node* icurr = getPointList();
+    node* jcurr;
+    double sum = 0;
+
+    while(icurr != nullptr){
+        jcurr = getPointList();
+        while(jcurr != nullptr){
+            sum += distanceTo(icurr->payload, jcurr->payload);
+            jcurr = jcurr->next;
+        }
+        icurr = icurr->next;
+    }
+
+    return sum/2.0;
+}
+
+double interClusterDistance(const cluster &cluster1, const cluster &cluster2);
+
+double interClusterDistance(const cluster &cluster1, const cluster &cluster2) {
+    node* icurr = cluster1.getPointList();
+    node* jcurr;
+    double sum = 0;
+
+    while(icurr != nullptr){
+        jcurr = cluster2.getPointList();
+        while(jcurr != nullptr){
+            sum += distanceTo(icurr->payload, jcurr->payload);
+            jcurr = jcurr->next;
+        }
+        icurr = icurr->next;
+    }
+
+    return sum;
+}
+
+int cluster::intraClusterEdges() {
+    return (getSize()*(getSize()-1))/2;
+}
+
+int interClusterEdges(const cluster &cluster1, const cluster &cluster2);
+
+int interClusterEdges(const cluster &cluster1, const cluster &cluster2) {
+    return cluster1.getSize()*cluster2.getSize();
+}
+
+kMeans::kMeans(string iin, string iout) {
+    in = iin;
+    out = iout;
+}
+
+void kMeans::run(int k) {
+    assert(k > 0);
+
+    ifstream clusIn;
+    ofstream clusOut;
+
+    clusIn.open(in);
+    clusOut.open(out);
+
+    cluster point_space;
+
+    //get input
+    stringstream ss;
+    point tempPoint;
+    string tempStr;
+    point_space = cluster();
+    string temp;
+    char c;
+    double *newPoint;
+    int newDim;
+    clusIn >> tempStr;
+    while(tempStr != ""){
+        ss << tempStr;
+
+        newDim = 0;
+        temp = "";
+        newPoint = nullptr;
+        while(ss.get(c)){
+            if(c == ','){
+                newPoint[newDim] = atof(temp.c_str());
+                ++newDim;
+                temp = "";
+            }
+            else{
+                temp += c;
+            }
+        }
+
+        newPoint[newDim] = atof(temp.c_str());
+        ++newDim;
+        tempPoint = point(newDim, newPoint);
+
+        point_space.add(&tempPoint);
+        clusIn >> tempStr;
+    }
+    //got input
+    clusIn.close();
+
+    cluster* clus_list;
+    clus_list[0] = point_space;
+    for(int i = 1; i < k; i++){
+        clus_list[i] = cluster();
+    }
+
+    pointPtr* start_cen;
+
 }
