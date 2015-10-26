@@ -2,6 +2,10 @@
 // Created by nickt_000 on 9/18/2015.
 //
 
+#include <iostream>
+
+using namespace std;
+
 #ifndef PA2_CLUSTERING_H
 #define PA2_CLUSTERING_H
 
@@ -12,6 +16,8 @@ namespace clustering {
         int dim;
         double* pointDim;
     public:
+        static const char POINT_VALUE_DELIM;
+
         point();
         point(const int);
         point(const int, double[]);
@@ -19,6 +25,13 @@ namespace clustering {
         ~point();
 
         double distanceTo(const point, const point);
+
+        int getDim(){
+            return dim;
+        }
+        double* getPointDim(){
+            return pointDim;
+        }
 
         point& operator= (const point&);
         bool operator== (const point&);
@@ -36,22 +49,46 @@ namespace clustering {
         point& operator-= (const point&);
         point& operator*= (const double);
         point& operator/= (const double);
+
+        friend istream& operator>> (istream&, point&);
+        friend ostream& operator<< (ostream&, point&);
     };
 
     typedef point * pointPtr;
 
+    struct node{
+        point payload;
+        node* next;
+    };
+
     class cluster {
     private:
-        struct node{
-            point payload;
-            node* next;
-        };
         int size;
         node* pointList;
+        unsigned int id;
+        point centroid;
+        bool validCen;
     public:
+        static const char POINT_CLUSTER_ID_DELIM;
+        static unsigned int __idGenerator;
+
         cluster();
         cluster(const cluster&);
         ~cluster();
+
+        int getSize(){
+            return size;
+        }
+        node* getPointList(){
+            return pointList;
+        }
+        unsigned int getId(){
+            return id;
+        }
+        void setId(){
+            id = __idGenerator;
+            __idGenerator++;
+        }
 
         void add(const pointPtr);
         pointPtr remove(const pointPtr);
@@ -66,6 +103,70 @@ namespace clustering {
         cluster& operator- (point&);
         cluster& operator+= (point&);
         cluster& operator-= (point&);
+
+        friend istream& operator>> (istream&, cluster&);
+        friend ostream& operator<< (ostream&, cluster&);
+
+        void setCentroid(const point& p){
+            centroid = p;
+            validCen = false;
+        }
+        const point getCentroid(){
+            return centroid;
+        }
+        void setValid(bool b){
+            validCen = b;
+        }
+        bool getValid(){
+            return validCen;
+        }
+        void calculateCen(){
+            node* curr = getPointList();
+
+            //if no points
+            if(curr == nullptr){
+                centroid = point(2);
+                setValid(true);
+                return;
+            }
+
+            //set initial
+            point p = curr->payload;
+            curr = curr->next;
+
+            while(curr != nullptr){
+                p += curr->payload;
+                curr = curr->next;
+            }
+
+            //find average
+            centroid = p/getSize();
+            validCen = true;
+        }
+
+        class Move{
+        private:
+            pointPtr p;
+            cluster* to;
+            cluster* from;
+        public:
+            Move(const pointPtr &ptr, cluster* ifrom, cluster* ito){
+                p = ptr;
+                from = ifrom;
+                to = ito;
+            }
+
+            void preform(){
+                to->add(from->remove(p));
+            }
+        };
+
+        void pickPoints(int, pointPtr*);
+
+        double intraClusterDistance();
+        double interClusterDistance(const cluster&, const cluster&);
+        int intraClusterEdges();
+        int interClusterEdges(const cluster&, const cluster&);
     };
 
 }

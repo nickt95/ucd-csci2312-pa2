@@ -5,8 +5,17 @@
 #include "clustering.h"
 #include <cassert>
 #include <cmath>
+#include <iostream>
+#include <string>
+#include <stdlib.h>
+#include <cstdlib>
+#include <sstream>
 
 using namespace clustering;
+
+const char POINT_VALUE_DELIM = ',';
+const char POINT_CLUSTER_ID_DELIM = ':';
+unsigned int cluster::__idGenerator = 1;
 
 point::point(const int i) {
     assert(i > 0);
@@ -162,28 +171,8 @@ point &point::operator/=(const double rhs) {
 cluster::cluster() {
     size = 0;
     pointList = nullptr;
-}
-
-cluster::cluster(const cluster &newCluster) {
-    size = 0;
-    pointList = nullptr;
-
-    node* nextPoint = newCluster.pointList;
-    while(nextPoint != nullptr){
-        add(&(nextPoint->payload));
-        nextPoint = nextPoint->next;
-    }
-}
-
-cluster::~cluster() {
-    node* curr = pointList;
-    node* next;
-
-    while(curr != nullptr){
-        next = curr->next;
-        delete curr;
-        curr = next;
-    }
+    setId();
+    setValid(false);
 }
 
 void cluster::add(pointPtr const ptr) {
@@ -192,6 +181,7 @@ void cluster::add(pointPtr const ptr) {
         n.payload = *ptr;
         pointList = &n;
         size++;
+        setValid(false);
         return;
     }
 
@@ -205,7 +195,8 @@ void cluster::add(pointPtr const ptr) {
         if(next == nullptr){
             node n;
             n.payload = *ptr;
-            *curr->next = &n;
+            curr->next = &n;
+            setValid(false);
             return;
         }
     }
@@ -215,13 +206,40 @@ void cluster::add(pointPtr const ptr) {
     n.next = next;
     (*curr).next = &n;
     size++;
+    setValid(false);
 }
+
+cluster::cluster(const cluster &newCluster) {
+    size = 0;
+    pointList = nullptr;
+
+    node* nextPoint = newCluster.pointList;
+    while(nextPoint != nullptr){
+        add(&(nextPoint->payload));
+        nextPoint = nextPoint->next;
+    }
+    setId();
+    setValid(false);
+}
+
+cluster::~cluster() {
+    node* curr = getPointList();
+    node* next;
+
+    while(curr != nullptr){
+        next = curr->next;
+        delete curr;
+        curr = next;
+    }
+}
+
 
 pointPtr cluster::remove(pointPtr const ptr) {
     if(*ptr == pointList->payload){
         node* del = pointList;
         pointList = del->next;
         delete del;
+        setValid(false);
         return ptr;
     }
 
@@ -237,6 +255,7 @@ pointPtr cluster::remove(pointPtr const ptr) {
     (*prev).next = curr->next;
     delete curr;
     size--;
+    setValid(false);
     return ptr;
 }
 
@@ -255,6 +274,7 @@ cluster &cluster::operator=(const cluster &rhs) {
         nextPoint = nextPoint->next;
     }
 
+    setValid(false);
     return *this;
 }
 
@@ -401,4 +421,125 @@ cluster &cluster::operator+=(point &rhs) {
 cluster &cluster::operator-=(point &rhs) {
     *this = *this - rhs;
     return *this;
+}
+
+istream &operator>>(istream &lhs, point &rhs) {
+    string temp;
+    char c;
+    double *newPoint;
+    int newDim = 0;
+
+    while(lhs.get(c)){
+        if(c == ','){
+            newPoint[newDim] = atof(temp.c_str());
+            ++newDim;
+            temp = "";
+        }
+        else{
+            temp += c;
+        }
+    }
+
+    newPoint[newDim] = atof(temp.c_str());
+    ++newDim;
+    rhs = point(newDim, newPoint);
+
+    return lhs;
+}
+
+ostream &operator<<(ostream &lhs, point &rhs) {
+    int curr = 0;
+
+    if(rhs.getDim() == 0)
+        return lhs;
+
+    while(true){
+        lhs << rhs.getPointDim()[curr];
+
+        if(curr == rhs.getDim()-1)
+            break;
+
+        lhs << POINT_VALUE_DELIM;
+        curr++;
+    }
+
+    return lhs;
+}
+
+istream &operator>>(istream &lhs, cluster &rhs) {
+    stringstream ss;
+    point tempPoint;
+    string tempStr;
+    rhs = cluster();
+    string temp;
+    char c;
+    double *newPoint;
+    int newDim;
+
+    lhs >> tempStr;
+    while(tempStr != ""){
+        ss << tempStr;
+
+        newDim = 0;
+        temp = "";
+        newPoint = nullptr;
+        while(ss.get(c)){
+            if(c == ','){
+                newPoint[newDim] = atof(temp.c_str());
+                ++newDim;
+                temp = "";
+            }
+            else{
+                temp += c;
+            }
+        }
+
+        newPoint[newDim] = atof(temp.c_str());
+        ++newDim;
+        tempPoint = point(newDim, newPoint);
+
+        rhs.add(&tempPoint);
+        lhs >> tempStr;
+    }
+
+    return lhs;
+}
+
+ostream &operator<<(ostream &lhs, cluster &rhs) {
+    node* curr = rhs.getPointList();
+    point temp;
+    int currN;
+
+    while(curr != nullptr){
+        temp = curr->payload;
+
+        currN = 0;
+        if(temp.getDim() != 0){
+            while(true){
+                lhs << temp.getPointDim()[currN];
+
+                if(currN == temp.getDim()-1)
+                    break;
+
+                lhs << POINT_VALUE_DELIM;
+                currN++;
+            }
+        }
+
+        lhs << POINT_CLUSTER_ID_DELIM << rhs.getId() << endl;
+
+        curr = curr->next;
+    }
+
+    return lhs;
+}
+
+void cluster::pickPoints(int k, pointPtr *pointArray) {
+    //get size of steps to take
+    int stepSize = getSize()/k;
+
+    //point to start
+    node* curr = getPointList();
+
+    //get points
 }
