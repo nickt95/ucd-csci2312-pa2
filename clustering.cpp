@@ -607,6 +607,35 @@ kMeans::kMeans(string iin, string iout) {
     out = iout;
 }
 
+long double getClusterScore(cluster* clusterList , int k){
+    long int P_in = 0;
+    long double D_in = 0;
+    long int P_out = 0;
+    long double D_out = 0;
+
+    for(int i = 0; i < k; i++){
+        D_in += clusterList[i].intraClusterDistance();
+    }
+
+    for(int i = 0; i < k-1; i++){
+        for(int j = i+1; j < k; j++){
+            D_out += interClusterDistance(clusterList[i], clusterList[j]);
+        }
+    }
+
+    for(int i = 0; i < k; i++){
+        P_in += clusterList[i].intraClusterEdges();
+    }
+
+    for(int i = 0; i < k-1; i++){
+        for(int j = i+1 ; j < k; j++){
+            P_out += interClusterEdges(clusterList[i], clusterList[j]);
+        }
+    }
+
+    return (D_in/P_in)/(D_out/P_out);
+}
+
 void kMeans::run(int k) {
     assert(k > 0);
 
@@ -662,5 +691,80 @@ void kMeans::run(int k) {
     }
 
     pointPtr* start_cen;
+    point_space.pickPoints(k, start_cen);
 
+    for(int i = 0; i < k; i++){
+        clus_list[i].setCentroid(*start_cen[i]);
+    }
+
+    long double score = 0;
+    long double newScore = 0;
+    long double scoreDif;
+
+    scoreDif = SCORE_DIFF_THRESHOLD + 1;
+
+    while(scoreDif < SCORE_DIFF_THRESHOLD){
+        for(int i = 0; i < k; i++){
+            node* currNode = clus_list[i].getPointList();
+            while(currNode != nullptr){
+                double minDis = distanceTo(currNode->payload, clus_list[0].getCentroid());
+                point closeCen = clus_list[0].getCentroid();
+                int bestCenId = 0;
+
+                for(int j = 1; j < k; j++){
+                    if(minDis > distanceTo(currNode->payload, clus_list[j].getCentroid())){
+                        minDis = distanceTo(currNode->payload, clus_list[j].getCentroid());
+                        closeCen = clus_list[j].getCentroid();
+                        bestCenId = j;
+                    }
+                }
+
+                if(closeCen != clus_list[i].getCentroid()){
+                    Move m(&(currNode->payload), &clus_list[i], &clus_list[bestCenId]);
+                    m.preform();
+                    delete &m;
+                }
+
+                delete &minDis;
+                delete &closeCen;
+                delete &bestCenId;
+
+                currNode = currNode->next;
+            }
+
+            delete currNode;
+        }
+
+        for(int i = 0; i < k; i++){
+            if(!clus_list[i].getValid()){
+                clus_list[i].calculateCen();
+                clus_list[i].setValid(true);
+            }
+        }
+
+        newScore = getClusterScore(clus_list, k);
+        scoreDif = abs(newScore-score);
+        score = newScore;
+    }
+
+    int curr;
+    for(int i = 0; i < k; i++){
+        curr = 0;
+
+        if(clus_list[i].getCentroid().getDim() == 0)
+            break;
+
+        while(true){
+            clusOut << clus_list[i].getCentroid().getPointDim()[curr];
+
+            if(curr == clus_list[i].getCentroid().getDim()-1)
+                break;
+
+            clusOut << POINT_VALUE_DELIM;
+            curr++;
+        }
+    }
+    clusOut.close();
+
+    delete[] clus_list;
 }

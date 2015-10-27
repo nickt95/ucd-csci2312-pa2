@@ -143,22 +143,6 @@ namespace clustering {
             validCen = true;
         }
 
-        class Move{
-        private:
-            pointPtr p;
-            cluster* to;
-            cluster* from;
-        public:
-            Move(const pointPtr &ptr, cluster* ifrom, cluster* ito){
-                p = ptr;
-                from = ifrom;
-                to = ito;
-            }
-
-            void preform(){
-                to->add(from->remove(p));
-            }
-        };
 
         void pickPoints(int, pointPtr*);
 
@@ -166,12 +150,32 @@ namespace clustering {
         int intraClusterEdges();
     };
 
+    class Move{
+    private:
+        pointPtr p;
+        cluster* to;
+        cluster* from;
+    public:
+        Move(const pointPtr &ptr, cluster* ifrom, cluster* ito){
+            p = ptr;
+            from = ifrom;
+            to = ito;
+        }
+
+        void preform(){
+            to->add(from->remove(p));
+        }
+    };
+
+
     class kMeans{
     private:
         string in;
         string out;
     public:
         kMeans(string, string);
+
+        const double SCORE_DIFF_THRESHOLD = 10.0;
 
         void run(int);
     };
